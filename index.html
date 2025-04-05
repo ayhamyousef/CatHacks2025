@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Molecular Dynamics - Xenon Transport Simulation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol.js/1.8.0/3Dmol-min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.0/es5/tex-mml-chtml.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        :root {
+            --primary: #0366d6;
+            --secondary: #6c757d;
+            --success: #28a745;
+            --info: #17a2b8;
+            --warning: #ffc107;
+            --danger: #dc3545;
+            --light: #f8f9fa;
+            --dark: #343a40;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            color: #333;
+            background-color: #f7f9fc;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background: linear-gradient(135deg, #0366d6, #17a2b8);
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+            border-bottom: 5px solid #0366d6;
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        h2 {
+            font-size: 1.8rem;
+            margin-top: 2rem;
+            color: #0366d6;
+            border-bottom: 2px solid #eaecef;
+            padding-bottom: 0.5rem;
+        }
+        h3 {
+            font-size: 1.4rem;
+            color: #0366d6;
+        }
+        .lead {
+            font-size: 1.2rem;
+            font-weight: 300;
+        }
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+        .card-header {
+            background-color: #f1f8ff;
+            padding: 1rem;
+            border-bottom: 1px solid #e1e4e8;
+        }
+        .card-body {
+            padding: 1.5rem;
+        }
+        .btn {
+            display: inline-block;
+            font-weight: 400;
+            text-align: center;
+            vertical-align: middle;
+            user-select: none;
+            padding: 0.375rem 0.75rem;
+            font-size: 1rem;
+            line-height: 1.5;
+            border-radius: 0.25rem;
+            transition: all 0.15s ease-in-out;
+            cursor: pointer;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .btn-primary {
+            color: #fff;
+            background-color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+        .btn-primary:hover {
+            background-color: #0353a8;
+        }
+        .btn-secondary {
+            color: #fff;
+            background-color: var(--secondary);
+            border: 1px solid var(--secondary);
+        }
+        .btn-info {
+            color: #fff;
+            background-color: var(--info);
+            border: 1px solid var(--info);
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        label {
+            display: inline-block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        input[type="range"], select, input[type="number"] {
+            display: block;
+            width: 100%;
+            padding: 0.375rem 0.75rem;
+            font-size: 1rem;
+            line-height: 1.5;
+            color: #495057;
+            background-color: #fff;
+            background-clip: padding-box;
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem;
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        }
+        .molecular-viewer {
+            height: 450px;
+            width: 100%;
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+        .simulation-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+        @media (max-width: 768px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+        .equation-box {
+            background-color: #f8f9fa;
+            border-left: 4px solid #0366d6;
+            padding: 1rem;
+            margin: 1rem 0;
+            overflow-x: auto;
+        }
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid #e1e4e8;
+        }
+        .tab {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            border: 1px solid transparent;
+            border-bottom: none;
+            border-radius: 0.25rem 0.25rem 0 0;
+            margin-right: 0.5rem;
+            background-color: #f1f8ff;
+        }
+        .tab.active {
+            background-color: white;
+            border-color: #e1e4e8;
+            border-bottom-color: white;
+            margin-bottom: -1px;
+            font-weight: 600;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        #energyChart {
+            width: 100%;
+            height: 300px;
+            margin: 1rem 0;
+        }
+        .slider-value {
+            display: inline-block;
+            width: 50px;
+            text-align: right;
+        }
+        .file-drop {
+            border: 2px dashed #0366d6;
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 1rem;
+            background-color: #f1f8ff;
+        }
+        footer {
+            background-color: #f1f8ff;
+            padding: 2rem 0;
+            text-align: center;
+            margin-top: 2rem;
+            border-top: 1px solid #e1e4e8;
+        }
+        pre {
+            background-color: #f6f8fa;
+            border-radius: 3px;
+            padding: 16px;
+            overflow: auto;
+            font-size: 85%;
+        }
+        code {
+            font-family: SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+            background-color: rgba(27, 31, 35, 0.05);
+            border-radius: 3px;
+            padding: 0.2em 0.4em;
+            font-size: 85%;
+        }
+        pre code {
+            background-color: transparent;
+            padding: 0;
+        }
+        .tag {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            line-height: 1;
+            color: #fff;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: baseline;
+            border-radius: 0.25rem;
+            background-color: var(--info);
+            margin-right: 0.5rem;
+        }
+        .tag.physics {
+            background-color: var(--primary);
+        }
+        .tag.chemistry {
+            background-color: var(--success);
+        }
+        .tag.computation {
+            background-color: var(--warning);
+            color: #212529;
+        }
+        .btn-group {
+            margin-bottom: 1rem;
+        }
+        .mt-3 {
+            margin-top: 1.5rem;
+        }
+        .mb-3 {
+            margin-bottom: 1.5rem;
+        }
+        .text-center {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Xenon Transport Simulation</h1>
+            <p class="lead">Interactive Molecular Dynamics of Water, Xenon, and Zinc Membrane</p>
+            <div>
+                <span class="tag physics">Molecular Physics</span>
+                <span class="tag chemistry">Computational Chemistry</span>
+                <span class="tag computation">Data Visualization</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h2 style="margin-top: 0;">Interactive Molecular Viewer</h2>
+            </div>
+            <div class="card-body">
+                <div class="tabs">
+                    <div class="tab active" data-tab="simulation">Simulation View</div>
+                    <div class="tab" data-tab="editor">Molecule Editor</div>
+                    <div class="tab" data-tab="analytics">Analytics</div>
+                </div>
+               
+                <div class="tab-content active" id="simulation-tab">
+                    <div class="molecular-viewer" id="viewer"></div>
+                    <div class="simulation-controls">
+                        <div class="form-group">
+                            <label for="timeSlider">Simulation Time: <span id="timeValue">0</span> ps</label>
+                            <input type="range" id="timeSlider" min="0" max="100" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="playSpeed">Playback Speed</label>
+                            <select id="playSpeed">
+                                <option value="0.5">0.5x</option>
+                                <option value="1" selected>1x</option>
+                                <option value="2">2x</option>
+                                <option value="4">4x</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <button class="btn btn-primary" id="playButton">Play</button>
+                            <button class="btn btn-secondary" id="pauseButton">Pause</button>
+                            <button class="btn btn-info" id="resetButton">Reset</button>
+                        </div>
+                    </div>
+                </div>
+               
+                <div class="tab-content" id="editor-tab">
+                    <div class="grid-2">
+                        <div>
+                            <h3>Molecular Parameters</h3>
+                            <div class="form-group">
+                                <label for="numWater">Number of Water Molecules: <span id="numWaterValue">400</span></label>
+                                <input type="range" id="numWater" min="50" max="800" value="400">
+                            </div>
+                            <div class="form-group">
+                                <label for="numXenon">Number of Xenon Atoms: <span id="numXenonValue">20</span></label>
+                                <input type="range" id="numXenon" min="5" max="50" value="20">
+                            </div>
+                            <div class="form-group">
+                                <label for="temperature">Temperature (K): <span id="temperatureValue">300</span></label>
+                                <input type="range" id="temperature" min="100" max="500" value="300">
+                            </div>
+                            <div class="form-group">
+                                <label for="chargeO">Oxygen Charge: <span id="chargeOValue">-0.834</span></label>
+                                <input type="range" id="chargeO" min="-1.5" max="0" step="0.01" value="-0.834">
+                            </div>
+                            <div class="form-group">
+                                <label for="chargeH">Hydrogen Charge: <span id="chargeHValue">0.417</span></label>
+                                <input type="range" id="chargeH" min="0" max="1.5" step="0.01" value="0.417">
+                            </div>
+                            <div class="form-group">
+                                <label for="chargeXe">Xenon Charge: <span id="chargeXeValue">-1</span></label>
+                                <input type="range" id="chargeXe" min="-2" max="2" step="0.1" value="-1">
+                            </div>
+                            <button class="btn btn-primary" id="applyChanges">Apply Changes</button>
+                        </div>
+                        <div>
+                            <h3>Force Field Parameters</h3>
+                            <div class="form-group">
+                                <label for="bondLength">O-H Bond Length (nm): <span id="bondLengthValue">0.09572</span></label>
+                                <input type="range" id="bondLength" min="0.08" max="0.12" step="0.001" value="0.09572">
+                            </div>
+                            <div class="form-group">
+                                <label for="bondK">Bond Force Constant (kJ/(mol·nm²)): <span id="bondKValue">50000</span></label>
+                                <input type="range" id="bondK" min="10000" max="100000" step="1000" value="50000">
+                            </div>
+                            <div class="form-group">
+                                <label for="angleEq">H-O-H Angle (degrees): <span id="angleEqValue">104.52</span></label>
+                                <input type="range" id="angleEq" min="90" max="120" step="0.1" value="104.52">
+                            </div>
+                            <div class="form-group">
+                                <label for="angleK">Angle Force Constant (kJ/(mol·rad²)): <span id="angleKValue">500</span></label>
+                                <input type="range" id="angleK" min="100" max="1000" step="10" value="500">
+                            </div>
+                            <div class="form-group">
+                                <label for="membraneSpacing">Membrane Spacing (nm): <span id="membraneSpacingValue">0.5</span></label>
+                                <input type="range" id="membraneSpacing" min="0.1" max="1.0" step="0.1" value="0.5">
+                            </div>
+                            <div class="file-drop" id="fileDrop">
+                                <p>Drop your own XYZ or PDB file here</p>
+                                <p>or</p>
+                                <input type="file" id="fileInput" accept=".xyz,.pdb">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+               
+                <div class="tab-content" id="analytics-tab">
+                    <div class="grid-2">
+                        <div>
+                            <h3>Energy Analysis</h3>
+                            <canvas id="energyChart"></canvas>
+                            <div class="form-group">
+                                <label>Select Energy Components</label>
+                                <div>
+                                    <input type="checkbox" id="chkKinetic" checked>
+                                    <label for="chkKinetic">Kinetic Energy</label>
+                                </div>
+                                <div>
+                                    <input type="checkbox" id="chkPotential" checked>
+                                    <label for="chkPotential">Potential Energy</label>
+                                </div>
+                                <div>
+                                    <input type="checkbox" id="chkTotal" checked>
+                                    <label for="chkTotal">Total Energy</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <h3>Transport Analysis</h3>
+                            <p>Xenon Penetration Metrics:</p>
+                            <div id="penetrationStats">
+                                <p>Average Penetration Depth: <strong id="avgDepth">0.0 nm</strong></p>
+                                <p>Maximum Penetration: <strong id="maxDepth">0.0 nm</strong></p>
+                                <p>Penetration Success Rate: <strong id="successRate">0%</strong></p>
+                            </div>
+                            <h3>Water Structure</h3>
+                            <p>Radial Distribution Functions:</p>
+                            <canvas id="rdfChart" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2 style="margin-top: 0;">Physical Chemistry Behind the Simulation</h2>
+            </div>
+            <div class="card-body">
+                <h3>The Chemistry of Xenon Transport</h3>
+                <p>This simulation models the transport of xenon gas through a zinc membrane, surrounded by water molecules. The process is governed by several key physical chemistry principles:</p>
+               
+                <div class="equation-box">
+                    <h4>Bond Energy in Water Molecules</h4>
+                    <p>The O-H bonds in water are modeled using a harmonic potential:</p>
+                    <p>\[ V_{bond}(r) = \frac{1}{2} k_{bond} (r - r_{eq})^2 \]</p>
+                    <p>Where \(k_{bond} = 50000\) kJ/(mol·nm²) and \(r_{eq} = 0.09572\) nm.</p>
+                </div>
+               
+                <div class="equation-box">
+                    <h4>H-O-H Angle in Water</h4>
+                    <p>The H-O-H angle is also modeled using a harmonic potential:</p>
+                    <p>\[ V_{angle}(\theta) = \frac{1}{2} k_{angle} (\theta - \theta_{eq})^2 \]</p>
+                    <p>Where \(k_{angle} = 500\) kJ/(mol·rad²) and \(\theta_{eq} = 104.52^{\circ}\) (1.8242 radians).</p>
+                </div>
+               
+                <div class="equation-box">
+                    <h4>Coulombic Interactions</h4>
+                    <p>Electrostatic interactions are calculated using Coulomb's law:</p>
+                    <p>\[ F_{coulomb} = k_e \frac{q_1 q_2}{r^2} \]</p>
+                    <p>Where \(k_e = 138.9355\) kJ·nm/mol and charges are \(q_O = -0.834 e\), \(q_H = 0.417 e\), and \(q_{Xe} = -1 e\).</p>
+                </div>
+               
+                <div class="equation-box">
+                    <h4>Xenon Transport Rate</h4>
+                    <p>The rate of xenon transport through the membrane can be approximated using a modified Arrhenius equation:</p>
+                    <p>\[ \text{Rate} = A \cdot e^{-\frac{E_a}{RT}} \cdot C_{Xe} \cdot (1 - \theta) \]</p>
+                    <p>Where \(E_a\) is the activation energy, \(C_{Xe}\) is xenon concentration, and \(\theta\) is the fractional occupancy of membrane sites.</p>
+                </div>
+               
+                <h3>Velocity Verlet Integration</h3>
+                <p>The simulation uses the Velocity Verlet algorithm to integrate the equations of motion:</p>
+                <div class="equation-box">
+                    <p>\[ \mathbf{r}(t + \Delta t) = \mathbf{r}(t) + \mathbf{v}(t) \Delta t + \frac{1}{2} \mathbf{a}(t) \Delta t^2 \]</p>
+                    <p>\[ \mathbf{v}(t + \Delta t) = \mathbf{v}(t) + \frac{1}{2}[\mathbf{a}(t) + \mathbf{a}(t + \Delta t)]\Delta t \]</p>
+                </div>
+               
+                <h3>Thermostat Control</h3>
+                <p>Temperature control is implemented using a velocity rescaling thermostat, which scales velocities to maintain the target temperature:</p>
+                <div class="equation-box">
+                    <p>\[ \lambda = \sqrt{\frac{T_{target}}{T_{current}}} \]</p>
+                    <p>\[ \mathbf{v}_i \rightarrow \lambda \mathbf{v}_i \]</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2 style="margin-top: 0;">Simulation Code & Features</h2>
+            </div>
+            <div class="card-body">
+                <h3>Key Features</h3>
+                <ul>
+                    <li><strong>Real-time 3D Visualization</strong> of water molecules, xenon atoms, and zinc membrane</li>
+                    <li><strong>Editable Parameters</strong> for customizing the simulation conditions</li>
+                    <li><strong>Interactive Controls</strong> to play, pause, and navigate through simulation time</li>
+                    <li><strong>Energy Analysis</strong> showing kinetic, potential, and total energy over time</li>
+                    <li><strong>Transport Metrics</strong> for monitoring xenon penetration through the membrane</li>
+                    <li><strong>Custom Molecule Import</strong> capability for loading external molecular structures</li>
+                </ul>
+               
+                <h3>Implementation Details</h3>
+                <p>The simulation is implemented using:</p>
+                <ul>
+                    <li><strong>3Dmol.js</strong> for molecular visualization</li>
+                    <li><strong>Chart.js</strong> for energy and analysis plots</li>
+                    <li><strong>MathJax</strong> for rendering chemical and physical equations</li>
+                    <li><strong>Custom JavaScript</strong> for molecular dynamics calculations</li>
+                </ul>
+               
+                <div class="mt-3 mb-3">
+                    <button class="btn btn-primary" id="downloadData">Download Simulation Data</button>
+                    <button class="btn btn-info" id="exportConfig">Export Configuration</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>Created for the Chemistry Hackathon 2025</p>
+            <p><a href="https://github.com/yourusername/xenon-transport-simulation" target="_blank">View on GitHub</a></p>
+        </div>
+    </footer>
+
+    <script>
+        // Initialize MathJax
+        window.MathJax = {
+            tex: {
+                inlineMath: [['\\(', '\\)']],
+                displayMath: [['\\[', '\\]']],
+                processEscapes: true
+            }
+        };
+
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Remove active class from all tabs and content
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+               
+                // Add active class to clicked tab and corresponding content
+                tab.classList.add('active');
+                document.getElementById(`${tab.dataset.tab}-tab`).classList.add('active');
+            });
+        });
+
+        // Initialize 3Dmol.js viewer
+        let viewer;
+       
+        function initViewer() {
+            let element = document.getElementById('viewer');
+            viewer = $3Dmol.createViewer(element, {
+                backgroundColor: 'white'
+            });
+           
+            // Add a cubic box to represent simulation boundaries
+            const boxSize = 20;
+            const lineWidth = 1.0;
+            const color = '0x808080';
+           
+            // Add box edges
+            viewer.addLine({
+                start: {x: 0, y: 0, z: 0},
+                end: {x: boxSize, y: 0, z: 0},
+                color: color,
+                width: lineWidth
+            });
+            viewer.addLine({
+                start: {x: 0, y: 0, z: 0},
+                end: {x: 0, y: boxSize, z: 0},
+                color: color,
+                width: lineWidth
+            });
+            viewer.addLine({
+                start: {x: 0, y: 0, z: 0},
+                end: {x: 0, y: 0, z: boxSize},
+                color: color,
+                width: lineWidth
+            });
+            viewer.addLine({
+                start: {x: boxSize, y: 0, z: 0},
+                end: {x: boxSize, y: boxSize, z: 0},
+                color: color,
+                width: lineWidth
+            });
+            viewer.addLine({
+                start: {x: boxSize, y: 0, z: 0},
+                end: {x: boxSize, y: 0, z: boxSize},
+                color: color,
+                width: lineWidth
+            });
+            viewer.addLine({
+                start: {x: 0, y: boxSize, z: 0},
+                end: {x: boxSize, y: boxSize, z: 0},
+                color: color,
+                width: lineWidth
+            });
+            viewer.addLine({
+                start: {x: 0, y: boxSize, z: 0},
+                end: {x: 0, y: boxSize, z: boxSize},
+                color: color,
+                width: lineWidth
+            });
+            viewer.addLine({
+                start: {x: 0, y: 0, z: boxSize},
+                end: {x: boxSize, y: 0, z: boxSize},
+                color: color,
+                width: lineWidth
+            });
+            viewer.addLine({
+                start: {x: 0, y: 0, z: boxSize},
+                end: {x: 0, y: boxSize, z: boxSize},
+                color: color,
+                width: lineWidth
+            });
+            viewer.addLine({
+                start: {x: boxSize, y: boxSize, z: 0},
+                end: {x: boxSize, y: boxSize, z: boxSize},
+                color: color,
+                width: lineWidth
+            });
+            viewer.addLine({
+                start: {x: boxSize, y: 0, z: boxSize},
+                end: {x: boxSize, y: boxSize, z: boxSize},
+                color: color,
+                width: lineWidth
+            });
+            viewer.addLine({
+                start: {x: 0, y: boxSize, z: boxSize},
+                end: {x: boxSize, y: boxSize, z: boxSize},
+                color: color,
+                width: lineWidth
+            });
+           
+            // Generate initial system
+            generateSystem();
+           
+            viewer.zoomTo();
+            viewer.render();
+        }
+       
+        // Mock data for the simulation
+        let simulationData = {
+            boxSize: 20,
+            nWater: 400,
+            nXenon: 20,
+            znSpacing: 0.5,
+            temperature: 300,
+            bondLength: 0.09572,
+            bondK: 50000,
+            angleEq: 104.52,
+            angleK: 500,
+            charges: {
+                O: -0.834,
+                H: 0.417,
+                Xe: -1,
+                Zn: 0
+            },
+            masses: {
+                O: 15.9994,
+                H: 1.008,
+                Xe: 1,
+                Zn: 65.38
+            },
+            timeSteps: 100,
+            currentStep: 0,
+            positions: [],
+            energies: {
+                kinetic: [],
+                potential: [],
+                total: []
+            },
+            transportMetrics: {
+                avgDepth: [],
+                maxDepth: [],
+                successRate: []
+            }
+        };
+       
+        // Generate random positions for water molecules, xenon, and zinc membrane
+        function generateSystem() {
+            viewer.removeAllModels();
+            viewer.removeAllSurfaces();
+           
+            const modelData = { atoms: [] };
+           
+            // Generate water molecules
+            for (let i = 0; i < simulationData.nWater; i++) {
+                const waterX = Math.random() * simulationData.boxSize/3 + 0.2;
+                const waterY = Math.random() * (simulationData.boxSize - 0.4) + 0.2;
+                const waterZ = Math.random() * (simulationData.boxSize - 0.4) + 0.2;
+               
+                // Oxygen atom
+                modelData.atoms.push({
+                    elem: 'O',
+                    x: waterX,
+                    y: waterY,
+                    z: waterZ,
+                    color: '0xFF0000'
+                });
+               
+                // Generate random orientation for hydrogen atoms
+                const theta = Math.random() * 2 * Math.PI;
+                const phi = Math.random() * 2 * Math.PI;
+               
+                // First hydrogen
+                const h1X = waterX + simulationData.bondLength * Math.sin(theta) * Math.cos(phi);
+                const h1Y = waterY + simulationData.bondLength * Math.sin(theta) * Math.sin(phi);
+                const h1Z = waterZ + simulationData.bondLength * Math.cos(theta);
+               
+                modelData.atoms.push({
+                    elem: 'H',
+                    x: h1X,
+                    y: h1Y,
+                    z: h1Z,
+                    color: '0x0000FF'
+                });
+               
+                // Second hydrogen - use angle between hydrogens
+                const angleRad = simulationData.angleEq * Math.PI / 180;
+                const h2X = waterX + simulationData.bondLength * Math.sin(theta + angleRad) * Math.cos(phi);
+                const h2Y = waterY + simulationData.bondLength * Math.sin(theta + angleRad) * Math.sin(phi);
+                const h2Z = waterZ + simulationData.bondLength * Math.cos(theta + angleRad);
+               
+                modelData.atoms.push({
+                    elem: 'H',
+                    x: h2X,
+                    y: h2Y,
+                    z: h2Z,
+                    color: '0x0000FF'
+                });
+            }
+           
+            // Generate xenon atoms
+            for (let i = 0; i < simulationData.nXenon; i++) {
+                const xenonX = Math.random() * simulationData.boxSize/3 + 0.2;
+                const xenonY = Math.random() * (simulationData.boxSize - 0.4) + 0.2;
+                const xenonZ = Math.random() * (simulationData.boxSize - 0.4) + 0.2;
+               
+                modelData.atoms.push({
+                    elem: 'Xe',
+                    x: xenonX,
+                    y: xenonY,
+                    z: xenonZ,
+                    color: '0x800080',
+                    radius: 0.4
+                });
+            }
+           
+            // Generate zinc membrane
+            const membraneX = simulationData.boxSize / 2;
+            const yValues = [];
+            const zValues = [];
+           
+            for (let y = 0; y < simulationData.boxSize; y += simulationData.znSpacing) {
+                yValues.push(y);
+            }
+           
+            for (let z = 0; z < simulationData.boxSize; z += simulationData.znSpacing) {
+                zValues.push(z);
+            }
+           
+            for (let y of yValues) {
+                for (let z of zValues) {
+                    modelData.atoms.push({
+                        elem: 'Zn',
+                        x: membraneX,
+                        y: y,
+                        z: z,
+                        color: '0x808080',
+                        radius: 0.2
+                    });
+                }
+            }
+           
+            // Add to viewer
+            viewer.addModel(modelData, "json");
+           
+            // Add bonds for water molecules
+            for (let i = 0; i < simulationData.nWater; i++) {
+                const oIndex = i * 3;
+                const h1Index = oIndex + 1;
+                const h2Index = oIndex + 2;
+               
+                viewer.addBond({
+                    atom1: oIndex,
+                    atom2: h1Index,
+                    color: '0x000000',
+                    radius: 0.1
+                });
+               
+                viewer.addBond({
+                    atom1: oIndex,
+                    atom2: h2Index,
+                    color: '0x000000',
+                    radius: 0.1
+                });
+            }
+           
+            // Set styles
+            viewer.setStyle({}, {sphere: {scale: 0.5}, stick: {radius: 0.1}});
+            viewer.setStyle({elem: 'O'}, {sphere: {scale: 0.4, color: '0xFF0000'}});
+            viewer.setStyle({elem: 'H'}, {sphere: {scale: 0.2, color: '0x0000FF'}});
+            viewer.setStyle({elem: 'Xe'}, {sphere: {scale: 0.8, color: '0x800080'}});
+            viewer.setStyle({elem: 'Zn'}, {sphere: {scale: 0.3, color: '0x808080'}});
+           
+            // Generate random energy data for the charts
+            generateEnergyData();
+            updateTransportMetrics();
+           
+            viewer.zoomTo();
+            viewer.render();
+        }
+       
+        // Generate random energy data for the simulation
+        function generateEnergyData() {
+            simulationData.energies.kinetic = [];
+            simulationData.energies.potential = [];
+            simulationData.energies.total = [];
+           
+            for (let i = 0; i < simulationData.timeSteps; i++) {
+                // Kinetic energy fluctuates with some randomness but stays close to 3/2*nParticles*kB*T
+                const baseKE = 3/2 * (simulationData.nWater * 3 + simulationData.nXenon) * 0.00831 * simulationData.temperature;
+                const ke = baseKE * (1 + 0.1 * (Math.random() - 0.5));
+               
+                // Potential energy typically negative, fluctuates
+                const basePE = -1.5 * baseKE;
+                const pe = basePE * (1 + 0.1 * (Math.random() - 0.5));
+               
+                // Total energy should be roughly conserved with small fluctuations
+                const te = ke + pe;
+               
+                simulationData.energies.kinetic.push(ke);
+                simulationData.energies.potential.push(pe);
+                simulationData.energies.total.push(te);
+            }
+           
+            updateEnergyChart();
+        }
+       
+        // Update transport metrics
+        function updateTransportMetrics() {
+            // Calculate penetration metrics based on xenon positions
+            const membraneX = simulationData.boxSize / 2;
+            const penetrationDepths = [];
+            let successCount = 0;
+           
+            // For the demo, generate random values
+            for (let i = 0; i < simulationData.nXenon; i++) {
+                const depth = Math.random() * 2 - 1; // Distance from membrane, negative means not penetrated
+                if (depth > 0) {
+                    penetrationDepths.push(depth);
+                    if (depth > 1) {
+                        successCount++;
+                    }
+                }
+            }
+           
+            const avgDepth = penetrationDepths.length ? penetrationDepths.reduce((a, b) => a + b, 0) / penetrationDepths.length : 0;
+            const maxDepth = penetrationDepths.length ? Math.max(...penetrationDepths) : 0;
+            const successRate = (successCount / simulationData.nXenon) * 100;
+           
+            // Update the display
+            document.getElementById('avgDepth').textContent = avgDepth.toFixed(2) + ' nm';
+            document.getElementById('maxDepth').textContent = maxDepth.toFixed(2) + ' nm';
+            document.getElementById('successRate').textContent = successRate.toFixed(1) + '%';
+           
+            // Store data for history
+            simulationData.transportMetrics.avgDepth.push(avgDepth);
+            simulationData.transportMetrics.maxDepth.push(maxDepth);
+            simulationData.transportMetrics.successRate.push(successRate);
+           
+            updateRDFChart();
+        }
+       
+        // Energy chart initialization
+        let energyChart;
+       
+        function initEnergyChart() {
+            const ctx = document.getElementById('energyChart').getContext('2d');
+            energyChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: simulationData.timeSteps}, (_, i) => i * 0.001 + ' ps'),
+                    datasets: [
+                        {
+                            label: 'Kinetic Energy',
+                            data: simulationData.energies.kinetic,
+                            borderColor: 'rgb(255, 99, 132)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Potential Energy',
+                            data: simulationData.energies.potential,
+                            borderColor: 'rgb(54, 162, 235)',
+                            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Total Energy',
+                            data: simulationData.energies.total,
+                            borderColor: 'rgb(75, 192, 192)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Energy (kJ/mol)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Time'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+       
+        function updateEnergyChart() {
+            if (!energyChart) {
+                initEnergyChart();
+                return;
+            }
+           
+            energyChart.data.datasets[0].data = simulationData.energies.kinetic;
+            energyChart.data.datasets[1].data = simulationData.energies.potential;
+            energyChart.data.datasets[2].data = simulationData.energies.total;
+            energyChart.update();
+        }
+       
+        // RDF chart
+        let rdfChart;
+       
+        function initRDFChart() {
+            const ctx = document.getElementById('rdfChart').getContext('2d');
+           
+            // Create synthetic RDF data
+            const rValues = Array.from({length: 50}, (_, i) => i * 0.05);
+            const gOO = rValues.map(r => {
+                if (r < 0.25) return 0;
+                if (r < 0.28) return 10 * (r - 0.25);
+                if (r < 0.3) return 0.3 - r;
+                return Math.exp(-Math.pow(r-0.28, 2) / 0.01) * 2;
+            });
+           
+            const gOH = rValues.map(r => {
+                if (r < 0.09) return 0;
+                if (r < 0.11) return 15;
+                return Math.exp(-Math.pow(r-0.1, 2) / 0.01) * 1.5;
+            });
+           
+            rdfChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: rValues.map(r => r.toFixed(2)),
+                    datasets: [
+                        {
+                            label: 'O-O',
+                            data: gOO,
+                            borderColor: 'rgb(255, 99, 132)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                            tension: 0.4
+                        },
+                        {
+                            label: 'O-H',
+                            data: gOH,
+                            borderColor: 'rgb(54, 162, 235)',
+                            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'g(r)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'r (nm)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+       
+        function updateRDFChart() {
+            if (!rdfChart) {
+                initRDFChart();
+            }
+        }
+       
+        // Initialize sliders and their value displays
+        function initSliders() {
+            // Time slider
+            const timeSlider = document.getElementById('timeSlider');
+            const timeValue = document.getElementById('timeValue');
+            timeSlider.max = simulationData.timeSteps - 1;
+            timeSlider.value = 0;
+            timeValue.textContent = '0';
+           
+            timeSlider.addEventListener('input', () => {
+                simulationData.currentStep = parseInt(timeSlider.value);
+                timeValue.textContent = (simulationData.currentStep * 0.001).toFixed(3);
+                updateMoleculePositions();
+            });
+           
+            // Number of water molecules
+            const numWaterSlider = document.getElementById('numWater');
+            const numWaterValue = document.getElementById('numWaterValue');
+            numWaterSlider.value = simulationData.nWater;
+            numWaterValue.textContent = simulationData.nWater;
+           
+            numWaterSlider.addEventListener('input', () => {
+                numWaterValue.textContent = numWaterSlider.value;
+            });
+           
+            // Number of xenon atoms
+            const numXenonSlider = document.getElementById('numXenon');
+            const numXenonValue = document.getElementById('numXenonValue');
+            numXenonSlider.value = simulationData.nXenon;
+            numXenonValue.textContent = simulationData.nXenon;
+           
+            numXenonSlider.addEventListener('input', () => {
+                numXenonValue.textContent = numXenonSlider.value;
+            });
+           
+            // Temperature
+            const temperatureSlider = document.getElementById('temperature');
+            const temperatureValue = document.getElementById('temperatureValue');
+            temperatureSlider.value = simulationData.temperature;
+            temperatureValue.textContent = simulationData.temperature;
+           
+            temperatureSlider.addEventListener('input', () => {
+                temperatureValue.textContent = temperatureSlider.value;
+            });
+           
+            // O-H Bond Length
+            const bondLengthSlider = document.getElementById('bondLength');
+            const bondLengthValue = document.getElementById('bondLengthValue');
+            bondLengthSlider.value = simulationData.bondLength;
+            bondLengthValue.textContent = simulationData.bondLength;
+           
+            bondLengthSlider.addEventListener('input', () => {
+                bondLengthValue.textContent = parseFloat(bondLengthSlider.value).toFixed(5);
+            });
+           
+            // Bond Force Constant
+            const bondKSlider = document.getElementById('bondK');
+            const bondKValue = document.getElementById('bondKValue');
+            bondKSlider.value = simulationData.bondK;
+            bondKValue.textContent = simulationData.bondK;
+           
+            bondKSlider.addEventListener('input', () => {
+                bondKValue.textContent = bondKSlider.value;
+            });
+           
+            // H-O-H Angle
+            const angleEqSlider = document.getElementById('angleEq');
+            const angleEqValue = document.getElementById('angleEqValue');
+            angleEqSlider.value = simulationData.angleEq;
+            angleEqValue.textContent = simulationData.angleEq;
+           
+            angleEqSlider.addEventListener('input', () => {
+                angleEqValue.textContent = parseFloat(angleEqSlider.value).toFixed(2);
+            });
+           
+            // Angle Force Constant
+            const angleKSlider = document.getElementById('angleK');
+            const angleKValue = document.getElementById('angleKValue');
+            angleKSlider.value = simulationData.angleK;
+            angleKValue.textContent = simulationData.angleK;
+           
+            angleKSlider.addEventListener('input', () => {
+                angleKValue.textContent = angleKSlider.value;
+            });
+           
+            // Charges
+            const chargeOSlider = document.getElementById('chargeO');
+            const chargeOValue = document.getElementById('chargeOValue');
+            chargeOSlider.value = simulationData.charges.O;
+            chargeOValue.textContent = simulationData.charges.O;
+           
+            chargeOSlider.addEventListener('input', () => {
+                chargeOValue.textContent = parseFloat(chargeOSlider.value).toFixed(3);
+            });
+           
+            const chargeHSlider = document.getElementById('chargeH');
+            const chargeHValue = document.getElementById('chargeHValue');
+            chargeHSlider.value = simulationData.charges.H;
+            chargeHValue.textContent = simulationData.charges.H;
+           
+            chargeHSlider.addEventListener('input', () => {
+                chargeHValue.textContent = parseFloat(chargeHSlider.value).toFixed(3);
+            });
+           
+            const chargeXeSlider = document.getElementById('chargeXe');
+            const chargeXeValue = document.getElementById('chargeXeValue');
+            chargeXeSlider.value = simulationData.charges.Xe;
+            chargeXeValue.textContent = simulationData.charges.Xe;
+           
+            chargeXeSlider.addEventListener('input', () => {
+                chargeXeValue.textContent = parseFloat(chargeXeSlider.value).toFixed(1);
+            });
+           
+            // Membrane spacing
+            const membraneSpacingSlider = document.getElementById('membraneSpacing');
+            const membraneSpacingValue = document.getElementById('membraneSpacingValue');
+            membraneSpacingSlider.value = simulationData.znSpacing;
+            membraneSpacingValue.textContent = simulationData.znSpacing;
+           
+            membraneSpacingSlider.addEventListener('input', () => {
+                membraneSpacingValue.textContent = membraneSpacingSlider.value;
+            });
+           
+            // Apply Changes button
+            document.getElementById('applyChanges').addEventListener('click', () => {
+                simulationData.nWater = parseInt(numWaterSlider.value);
+                simulationData.nXenon = parseInt(numXenonSlider.value);
+                simulationData.temperature = parseFloat(temperatureSlider.value);
+                simulationData.bondLength = parseFloat(bondLengthSlider.value);
+                simulationData.bondK = parseFloat(bondKSlider.value);
+                simulationData.angleEq = parseFloat(angleEqSlider.value);
+                simulationData.angleK = parseFloat(angleKSlider.value);
+                simulationData.charges.O = parseFloat(chargeOSlider.value);
+                simulationData.charges.H = parseFloat(chargeHSlider.value);
+                simulationData.charges.Xe = parseFloat(chargeXeSlider.value);
+                simulationData.znSpacing = parseFloat(membraneSpacingSlider.value);
+               
+                generateSystem();
+            });
+        }
+       
+        // Play/Pause functionality
+        let animationInterval;
+       
+        function initPlaybackControls() {
+            const playButton = document.getElementById('playButton');
+            const pauseButton = document.getElementById('pauseButton');
+            const resetButton = document.getElementById('resetButton');
+            const timeSlider = document.getElementById('timeSlider');
+            const playSpeed = document.getElementById('playSpeed');
+           
+            playButton.addEventListener('click', () => {
+                if (animationInterval) {
+                    clearInterval(animationInterval);
+                }
+               
+                const speed = parseFloat(playSpeed.value);
+                const frameTime = 100 / speed; // milliseconds per frame
+               
+                animationInterval = setInterval(() => {
+                    simulationData.currentStep = (simulationData.currentStep + 1) % simulationData.timeSteps;
+                    timeSlider.value = simulationData.currentStep;
+                    document.getElementById('timeValue').textContent = (simulationData.currentStep * 0.001).toFixed(3);
+                    updateMoleculePositions();
+                }, frameTime);
+            });
+           
+            pauseButton.addEventListener('click', () => {
+                if (animationInterval) {
+                    clearInterval(animationInterval);
+                    animationInterval = null;
+                }
+            });
+           
+            resetButton.addEventListener('click', () => {
+                if (animationInterval) {
+                    clearInterval(animationInterval);
+                    animationInterval = null;
+                }
+               
+                simulationData.currentStep = 0;
+                timeSlider.value = 0;
+                document.getElementById('timeValue').textContent = '0';
+                updateMoleculePositions();
+            });
+        }
+       
+        // Function to update molecule positions based on current time step
+        function updateMoleculePositions() {
+            // For a real simulation, we would update positions based on simulation data
+            // For now, we'll just perturb the positions slightly to show movement
+            const atoms = viewer.getModel().selectedAtoms({});
+           
+            const membraneX = simulationData.boxSize / 2;
+            const timeStep = simulationData.currentStep;
+           
+            // Only perturb water molecules and xenon atoms, not zinc membrane
+            for (let i = 0; i < atoms.length; i++) {
+                const atom = atoms[i];
+               
+                if (atom.elem === 'Zn') {
+                    continue;
+                }
+               
+                // Add small brownian motion + directed movement
+                const noise = 0.05 * (Math.random() - 0.5);
+                const xDirection = (atom.x < membraneX) ? 0.01 : -0.01; // Move toward membrane
+               
+                // For water molecules (O and H)
+                if (atom.elem === 'O' || atom.elem === 'H') {
+                    atom.x += noise * Math.sin(timeStep * 0.1) + xDirection * Math.random();
+                    atom.y += noise * Math.cos(timeStep * 0.1);
+                    atom.z += noise * Math.sin(timeStep * 0.2);
+                }
+                // For xenon atoms - more directed movement
+                else if (atom.elem === 'Xe') {
+                    atom.x += noise + xDirection * 0.2;
+                    atom.y += noise;
+                    atom.z += noise;
+                }
+               
+                // Keep within bounds
+                atom.x = Math.max(0.2, Math.min(simulationData.boxSize - 0.2, atom.x));
+                atom.y = Math.max(0.2, Math.min(simulationData.boxSize - 0.2, atom.y));
+                atom.z = Math.max(0.2, Math.min(simulationData.boxSize - 0.2, atom.z));
+            }
+           
+            // Preserve water molecule bonds
+            for (let i = 0; i < simulationData.nWater; i++) {
+                const oIndex = i * 3;
+                const h1Index = oIndex + 1;
+                const h2Index = oIndex + 2;
+               
+                if (oIndex >= atoms.length || h1Index >= atoms.length || h2Index >= atoms.length) {
+                    continue;
+                }
+               
+                const oAtom = atoms[oIndex];
+                const h1Atom = atoms[h1Index];
+                const h2Atom = atoms[h2Index];
+               
+                // Fix O-H bond length
+                const oh1Vector = [h1Atom.x - oAtom.x, h1Atom.y - oAtom.y, h1Atom.z - oAtom.z];
+                const oh1Length = Math.sqrt(oh1Vector[0]**2 + oh1Vector[1]**2 + oh1Vector[2]**2);
+                const oh1Scale = simulationData.bondLength / oh1Length;
+               
+                h1Atom.x = oAtom.x + oh1Vector[0] * oh1Scale;
+                h1Atom.y = oAtom.y + oh1Vector[1] * oh1Scale;
+                h1Atom.z = oAtom.z + oh1Vector[2] * oh1Scale;
+               
+                const oh2Vector = [h2Atom.x - oAtom.x, h2Atom.y - oAtom.y, h2Atom.z - oAtom.z];
+                const oh2Length = Math.sqrt(oh2Vector[0]**2 + oh2Vector[1]**2 + oh2Vector[2]**2);
+                const oh2Scale = simulationData.bondLength / oh2Length;
+               
+                h2Atom.x = oAtom.x + oh2Vector[0] * oh2Scale;
+                h2Atom.y = oAtom.y + oh2Vector[1] * oh2Scale;
+                h2Atom.z = oAtom.z + oh2Vector[2] * oh2Scale;
+            }
+           
+            // Update the displayed atoms
+            viewer.removeAllShapes();
+            viewer.render();
+           
+            // Update transport metrics if needed
+            if (simulationData.currentStep % 10 === 0) {
+                updateTransportMetrics();
+            }
+        }
+       
+        // File import handling
+        function initFileImport() {
+            const fileInput = document.getElementById('fileInput');
+            const fileDrop = document.getElementById('fileDrop');
+           
+            // Handle file selection
+            fileInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    readMoleculeFile(file);
+                }
+            });
+           
+            // Handle drag and drop
+            fileDrop.addEventListener('dragover', (event) => {
+                event.preventDefault();
+                fileDrop.style.backgroundColor = '#e6f7ff';
+            });
+           
+            fileDrop.addEventListener('dragleave', () => {
+                fileDrop.style.backgroundColor = '#f1f8ff';
+            });
+           
+            fileDrop.addEventListener('drop', (event) => {
+                event.preventDefault();
+                fileDrop.style.backgroundColor = '#f1f8ff';
+               
+                const file = event.dataTransfer.files[0];
+                if (file) {
+                    readMoleculeFile(file);
+                }
+            });
+        }
+       
+        function readMoleculeFile(file) {
+            const reader = new FileReader();
+           
+            reader.onload = (event) => {
+                const content = event.target.result;
+               
+                if (file.name.endsWith('.xyz')) {
+                    loadXYZFormat(content);
+                } else if (file.name.endsWith('.pdb')) {
+                    loadPDBFormat(content);
+                } else {
+                    alert('Unsupported file format. Please upload an XYZ or PDB file.');
+                }
+            };
+           
+            reader.readAsText(file);
+        }
+       
+        function loadXYZFormat(content) {
+            viewer.removeAllModels();
+            viewer.addModel(content, "xyz");
+            viewer.setStyle({}, {stick:{}, sphere:{scale:0.5}});
+            viewer.zoomTo();
+            viewer.render();
+           
+            alert('XYZ file loaded successfully!');
+        }
+       
+        function loadPDBFormat(content) {
+            viewer.removeAllModels();
+            viewer.addModel(content, "pdb");
+            viewer.setStyle({}, {stick:{}, sphere:{scale:0.5}});
+            viewer.zoomTo();
+            viewer.render();
+           
+            alert('PDB file loaded successfully!');
+        }
+       
+        // Download simulation data
+        function initDataExport() {
+            document.getElementById('downloadData').addEventListener('click', () => {
+                const data = {
+                    parameters: {
+                        boxSize: simulationData.boxSize,
+                        nWater: simulationData.nWater,
+                        nXenon: simulationData.nXenon,
+                        znSpacing: simulationData.znSpacing,
+                        temperature: simulationData.temperature,
+                        bondLength: simulationData.bondLength,
+                        bondK: simulationData.bondK,
+                        angleEq: simulationData.angleEq,
+                        angleK: simulationData.angleK,
+                        charges: simulationData.charges
+                    },
+                    energies: simulationData.energies,
+                    transportMetrics: simulationData.transportMetrics
+                };
+               
+                const dataStr = JSON.stringify(data, null, 2);
+                const blob = new Blob([dataStr], {type: 'application/json'});
+                const url = URL.createObjectURL(blob);
+               
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'xenon_transport_simulation_data.json';
+                a.click();
+               
+                URL.revokeObjectURL(url);
+            });
+           
+            document.getElementById('exportConfig').addEventListener('click', () => {
+                const config = {
+                    nWater: simulationData.nWater,
+                    nXenon: simulationData.nXenon,
+                    znSpacing: simulationData.znSpacing,
+                    temperature: simulationData.temperature,
+                    bondLength: simulationData.bondLength,
+                    bondK: simulationData.bondK,
+                    angleEq: simulationData.angleEq,
+                    angleK: simulationData.angleK,
+                    charges: simulationData.charges
+                };
+               
+                const configStr = JSON.stringify(config, null, 2);
+                const blob = new Blob([configStr], {type: 'application/json'});
+                const url = URL.createObjectURL(blob);
+               
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'xenon_transport_config.json';
+                a.click();
+               
+                URL.revokeObjectURL(url);
+            });
+        }
+       
+        // Initialize everything when the page loads
+        window.onload = function() {
+            initViewer();
+            initSliders();
+            initPlaybackControls();
+            initFileImport();
+            initDataExport();
+        };
+    </script>
+</body>
+</html>
